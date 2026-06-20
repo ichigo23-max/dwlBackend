@@ -41,14 +41,61 @@ function normalizeInputs(inputs) {
   return [];
 }
 
+const HEALTHCHECK_URL = process.env.HEALTHCHECK_URL || "https://dataweave-playground-latest.onrender.com/healthCheck";
+
+async function checkHealthcheckUrl() {
+  const startedAt = Date.now();
+
+  try {
+    const response = await fetch(HEALTHCHECK_URL, { method: "GET" });
+    const durationMs = Date.now() - startedAt;
+
+    console.log("[healthcheck] heartbeat ok", {
+      url: HEALTHCHECK_URL,
+      status: response.status,
+      ok: response.ok,
+      durationMs
+    });
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      durationMs
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+
+    console.error("[healthcheck] heartbeat failed", {
+      url: HEALTHCHECK_URL,
+      durationMs,
+      error: error.message
+    });
+
+    return {
+      ok: false,
+      status: 0,
+      durationMs,
+      error: error.message
+    };
+  }
+}
+
 // Points at your local Docker DataWeave compiler on :3000
 const dw = new DataWeaveRunner({
   url: process.env.DW_COMPILER_URL || "https://dataweave-playground-latest.onrender.com/api/transform",
   version: process.env.DW_VERSION || "2.3.0"
 });
 
-// POST /api/transform
-// body: { script: string, inputs: [{ name, value, mimeType? }] }
+app.get("/healthcheck", async (req, res) => {
+  const result = await checkHealthcheckUrl();
+
+  res.status(result.ok ? 200 : 503).json({
+    status: result.ok ? "ok" : "degraded",
+    upstream: HEALTHCHECK_URL,
+    ...result
+  });
+});
+
 app.post("/api/transform", async (req, res) => {
   const { script, inputs } = req.body || {};
   const normalizedScript = normalizeDataWeaveScript(script);
@@ -83,9 +130,24 @@ app.post("/api/transform", async (req, res) => {
 });
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/healthcheck", async (req, res) => {
+  const result = await checkHealthcheckUrl();
+
+  res.status(result.ok ? 200 : 503).json({
+    status: result.ok ? "ok" : "degraded",
+    upstream: HEALTHCHECK_URL,
+    ...result
+  });
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`DataWeave API listening on http://localhost:${PORT}`);
   console.log(`Forwarding compiles to ${dw.url}`);
+  console.log(`Healthcheck target is ${HEALTHCHECK_URL}`);
+
+  checkHealthcheckUrl();
+  setInterval(() => {
+    checkHealthcheckUrl();
+  }, 3 * 60 * 1000);
 });

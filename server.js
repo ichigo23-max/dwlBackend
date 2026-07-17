@@ -35,7 +35,11 @@ function normalizeDataWeaveScript(script) {
 
 function normalizeInputs(inputs) {
   if (Array.isArray(inputs)) {
-    return inputs;
+    return inputs.map(input => ({
+      name: input.name,
+      value: input.value,
+      mimeType: input.mimeType || "application/json"
+    }));
   }
 
   return [];

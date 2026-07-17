@@ -45,7 +45,7 @@ function normalizeInputs(inputs) {
   return [];
 }
 
-const HEALTHCHECK_URL = process.env.HEALTHCHECK_URL || "https://dataweave-playground.onrender.com/healthCheck";
+const HEALTHCHECK_URL = process.env.HEALTHCHECK_URL || "https://dataweave-playground-h1p7.onrender.com/healthCheck";
 
 async function checkHealthcheckUrl() {
   const startedAt = Date.now();
@@ -86,7 +86,7 @@ async function checkHealthcheckUrl() {
 
 // Points at your local Docker DataWeave compiler on :3000
 const dw = new DataWeaveRunner({
-  url: process.env.DW_COMPILER_URL || "https://dataweave-playground.onrender.com/api/transform",
+  url: process.env.DW_COMPILER_URL || "https://dataweave-playground-h1p7.onrender.com/api/transform",
   version: process.env.DW_VERSION || "2.3.0"
 });
 
